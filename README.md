@@ -1,53 +1,97 @@
 # PathoScope V5
 
+PathoScope V5
 
-PathoScope V5 is a bioinformatics platform designed to integrate gene expression analysis, pathway visualization, and AI-driven drug–target predictions.  
-It provides an accessible environment for researchers, students, and professionals to explore disease mechanisms and therapeutic targets.
+PathoScope V5 is an AI-powered disease-mechanism explorer. It ingests gene-expression data, visualizes KEGG pathways, and surfaces potential drug targets with interactive plots (volcano, MA, heatmap) in a modern Flask UI.
 
----
+Features (at a glance)
 
-## Features
+Upload & analyze gene expression datasets
 
-- Upload and analyze gene expression datasets (CSV/TSV).
-- Visualize KEGG pathways with integrated differential expression mapping.
-- Predict drug–target interactions using DrugBank and AI models.
-- Export results as publication-ready PDF reports.
-- User account system with local and Firebase storage support.
-- Responsive interface with adaptive light/dark theme.
+Differential expression stats (e.g., via SciPy)
 
----
+Interactive plots (volcano, MA, heatmap)
 
-## Technology Stack
+KEGG pathway visualization
 
-- **Backend:** Python (Flask)  
-- **Frontend:** HTML, CSS, JavaScript  
-- **Visualization:** Plotly, Cytoscape.js  
-- **Database/Storage:** Local and Firebase  
-- **APIs:** DrugBank, KEGG  
-- **Export:** ReportLab (PDF generation)
+Drug-target lookups & external resources
 
----
+Export results (CSV/PDF)
 
-## Installation
+Prerequisites
 
-Clone the repository:
-```bash
-git clone https://github.com/Acr0matix/Pathoscope-V5.git
-cd Pathoscope-V5
+Python 3.9–3.12 recommended
 
-Create a virtual environment and install dependencies:
+pip 21+
 
-python3 -m venv venv
-source venv/bin/activate   # macOS/Linux
-venv\Scripts\activate      # Windows
+(Optional) Conda if you prefer managing environments that way
 
-pip install -r requirements.txt
+Git (SSH recommended)
 
-Run the application locally:
+Quick Start (Virtualenv)
 
-flask run
+Text (what you’ll do):
+Create a clean virtual environment in the project root, upgrade pip, install compatible deps (with version ranges that avoid NumPy/SciPy conflicts), then run the app.
 
+Code (copy-paste):
 
-Open the browser at:
+# 0) Make sure you're in the project root
+cd ~/Desktop/Pathoscope-V5  # adjust path if different
 
-http://127.0.0.1:5000/
+# 1) (Recommended) Start clean by deactivating anything active
+conda deactivate 2>/dev/null || true
+deactivate 2>/dev/null || true
+
+# 2) Create a fresh venv using system Python
+/usr/bin/python3 -m venv venv   # macOS/Linux
+# Windows (PowerShell):  py -3 -m venv venv
+
+# 3) Activate it
+source venv/bin/activate        # macOS/Linux
+# Windows (PowerShell):  venv\Scripts\Activate.ps1
+
+# 4) Upgrade installer tooling
+python -m pip install --upgrade pip setuptools wheel
+
+# 5) Install dependencies with safe version ranges
+# Try requirements.txt first (provided below). If you don't have it yet, skip to the "Requirements file" section.
+python -m pip install -r requirements.txt
+
+# If you hit conflicts, install core libs directly:
+# python -m pip install "numpy>=1.26,<2.3" "scipy>=1.13,<1.14" pandas flask plotly
+
+# 6) Run the app
+python app.py
+# Then open: http://127.0.0.1:5000
+
+Quick Start (Conda alternative)
+
+Text:
+Use a dedicated Conda env if you prefer. This avoids mixing with base/Anaconda.
+
+Code:
+
+conda deactivate 2>/dev/null || true
+conda create -y -n pathoscope python=3.12
+conda activate pathoscope
+
+# Install with requirements.txt
+python -m pip install -r requirements.txt
+
+# Or install core libs directly if needed:
+# python -m pip install "numpy>=1.26,<2.3" "scipy>=1.13,<1.14" pandas flask plotly
+
+python app.py
+
+Requirements file (cross-machine friendly)
+
+Text:
+Use ranges instead of strict pins. This resolves the conflict you saw (numpy==2.3.1 vs scipy==1.13.1).
+
+Code (save as requirements.txt):
+
+flask>=3.0
+plotly>=5.18
+pandas>=2.2
+numpy>=1.26,<2.3
+scipy>=1.13,<1.14
