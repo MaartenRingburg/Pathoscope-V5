@@ -1,0 +1,13 @@
+Flask>=2.0
+python-dotenv
+pandas
+numpy
+plotly
+reportlab
+google-generativeai
+firebase-admin
+requests
+scipy
+gprofiler-official
+celery
+redis

@@ -1,0 +1,44 @@
+// frontend/src/auth/Login.jsx
+import React, { useState } from 'react';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+
+export default function Login({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    try {
+      const auth = getAuth();
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      onLogin(userCred.user);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <form onSubmit={handleSubmit}>
+        <h2>Sign In</h2>
+        {error && <p className="error">{error}</p>}
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  );
+}

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Results – PathoScope</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+
+  <style>
+    :root{
+      --bg: #0b1020; --surface:#11162a; --muted:#96a0c8; --text:#e9edff; --acc:#7aa2ff; --acc-2:#8effc7; --danger:#ff6b6b;
+      --ring: 0 0 0 2px rgba(122,162,255,.35);
+    }
+    [data-theme="light"]:root{ --bg:#f6f7fb; --surface:#ffffff; --muted:#5b6381; --text:#0d1321; --acc:#3b82f6; --acc-2:#10b981; --danger:#ef4444; }
+
+    html, body { height: 100%; }
+    html { background: var(--bg); }
+    body { margin:0; color:var(--text); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; background: transparent; }
+
+    html::before, html::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+    html::before { background:
+        radial-gradient(1400px 900px at 10% -10%, rgba(122,162,255,.14), transparent),
+        radial-gradient(1100px 800px at 115% 0%, rgba(16,185,129,.10), transparent);
+    }
+    html::after { background:
+        radial-gradient(1400px 900px at 50% 120%, rgba(122,162,255,.10), transparent),
+        radial-gradient(1200px 800px at -10% 100%, rgba(16,185,129,.08), transparent);
+    }
+
+    .container{max-width:1280px;margin:0 auto;padding:20px}
+    header{position:sticky;top:0;z-index:20;backdrop-filter:saturate(1.4) blur(10px);
+      background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0));border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+    .brand svg{width:30px;height:30px}
+    .actions{display:flex;gap:10px}
+
+    main{padding:20px}
+    h2{margin:0 0 12px}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.15);}
+    .section{margin:18px 0}
+    .muted{color:var(--muted)}
+
+    .btn{cursor:pointer;border:none;border-radius:12px;padding:10px 14px;font-weight:700}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.18)}
+    .btn-primary{background:linear-gradient(180deg, var(--acc), #587fe6); color:#fff}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.2);font-size:.9rem}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:10px 0}
+    .stat-card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;text-align:center}
+    .stat-value{font-size:1.6rem;font-weight:800;color:var(--acc)}
+    .stat-label{color:var(--muted);font-size:.9rem}
+
+    .plot{height:420px}
+    .network-container{height:600px;border:1px solid rgba(255,255,255,.12);border-radius:12px;margin-top:10px}
+
+    .grid{display:grid;gap:18px; grid-template-columns: 1fr;}
+    @media (min-width: 900px){
+      .grid{ grid-template-columns: repeat(12, minmax(0,1fr)); }
+      .grid-left{ grid-column: span 7; }
+      .grid-right{ grid-column: span 5; }
+    }
+    @media (min-width: 1400px){
+      .container{ max-width: 1400px; }
+      .grid-left{ grid-column: span 8; }
+      .grid-right{ grid-column: span 4; }
+    }
+
+    .links{display:flex;gap:10px;flex-wrap:wrap}
+    .link-btn{border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;display:inline-flex;align-items:center;gap:8px}
+    .link-btn:hover{box-shadow:var(--ring)}
+
+    .kegg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+    .kegg-card{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px}
+    .kegg-card img{width:100%;height:auto;display:block;border-radius:10px}
+
+    a{color:var(--acc)}
+
+    /* Full-width span helper */
+    .span-all { grid-column: 1 / -1; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav container">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 12c0-4.418 3.582-8 8-8 2.7 0 5.08 1.34 6.53 3.39l-2.29 1.33C15.3 6.5 13.77 5.8 12 5.8 8.76 5.8 6.12 8.44 6.12 11.68S8.76 17.56 12 17.56c1.77 0 3.3-.7 4.24-1.92l2.29 1.33C17.08 19.66 14.7 21 12 21 7.58 21 4 16.97 4 12z" fill="currentColor" opacity=".9"/>
+          <circle cx="12" cy="12" r="2.6" fill="currentColor"/>
+        </svg>
+        <span>PathoScope V5</span>
+      </div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="/">← Back</a>
+        <button class="btn btn-ghost" id="themeToggle">Toggle theme</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card section">
+      <h2>Results for {{ r.disease or 'Unknown' }}</h2>
+      {% if r and r.summary %}
+        <p class="muted">{{ r.summary }}</p>
+      {% endif %}
+      <div class="links" style="margin-top:8px">
+        <a class="link-btn" href="/download_pdf">Download PDF</a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Left Column -->
+      <div class="grid-left">
+        <!-- Genes -->
+        <section class="card section" aria-labelledby="genesTitle">
+          <h3 id="genesTitle">Genes</h3>
+          {% if r and r.genes %}
+            <div class="chips" aria-label="Gene list">
+              {% for g in r.genes %}
+                <a class="chip" href="https://www.ncbi.nlm.nih.gov/gene/{{ g }}" target="_blank" rel="noopener">{{ g }}</a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted">No genes found.</p>
+          {% endif %}
+        </section>
+
+        <!-- DE Analysis -->
+        {% if analysis_results and analysis_results.genes %}
+        <section class="card section" aria-labelledby="deaTitle">
+          <h3 id="deaTitle">Differential Expression Analysis</h3>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">{{ analysis_results.genes|length }}</div>
+              <div class="stat-label">Total Genes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">{{ analysis_results.significant_genes|length if analysis_results.significant_genes else 0 }}</div>
+              <div class="stat-label">Significant Genes</div>
+            </div>
+          </div>
+
+          {% if volcano_data and volcano_data.figure %}
+          <h4>Volcano Plot</h4>
+          <div id="volcano" class="plot"></div>
+          <script>
+            Plotly.newPlot('volcano', {{ volcano_data.figure.data | tojson }}, {{ volcano_data.figure.layout | tojson }});
+          </script>
+          {% endif %}
+
+          {% if ma_plot_data and ma_plot_data.figure %}
+          <h4>MA Plot</h4>
+          <div id="ma-plot" class="plot"></div>
+          <script>
+            Plotly.newPlot('ma-plot', {{ ma_plot_data.figure.data | tojson }}, {{ ma_plot_data.figure.layout | tojson }});
+          </script>
+          {% endif %}
+
+          {% if heatmap_data and heatmap_data.figure %}
+          <h4>Expression Heatmap</h4>
+          <div id="heatmap" class="plot"></div>
+          <script>
+            Plotly.newPlot('heatmap', {{ heatmap_data.figure.data | tojson }}, {{ heatmap_data.figure.layout | tojson }});
+          </script>
+          {% endif %}
+        </section>
+        {% endif %}
+
+        <!-- Enrichment -->
+        <section class="card section" aria-labelledby="enrichTitle">
+          <h3 id="enrichTitle">Gene Ontology & Reactome Enrichment</h3>
+          {% if enrichment_plot and enrichment_plot.figure %}
+            <div id="enrichment-plot" class="plot"></div>
+            <script>
+              Plotly.newPlot('enrichment-plot', {{ enrichment_plot.figure.data | tojson }}, {{ enrichment_plot.figure.layout | tojson }});
+            </script>
+          {% else %}
+            <p class="muted">No enrichment data available.</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <!-- Right Column -->
+      <div class="grid-right">
+        <!-- Network -->
+        <section class="card section" aria-labelledby="netTitle">
+          <h3 id="netTitle">Protein-Protein Interaction Network</h3>
+          {% if network_data and network_data.nodes and network_data.nodes|length > 0 %}
+            {% if network_report and network_report.network_stats %}
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value">{{ network_report.network_stats.total_nodes }}</div>
+                <div class="stat-label">Network Nodes</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">{{ network_report.network_stats.total_edges }}</div>
+                <div class="stat-label">Interactions</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">{{ "%.2f"|format(network_report.network_stats.average_degree) }}</div>
+                <div class="stat-label">Avg Degree</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">{{ network_report.network_quality|title if network_report.network_quality else 'Low' }}</div>
+                <div class="stat-label">Network Quality</div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if cytoscape_config and cytoscape_config.elements %}
+            <div id="cy" class="network-container"></div>
+            <script>
+              const cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: {{ cytoscape_config.elements | tojson }},
+                style: {{ cytoscape_config.style | tojson }},
+                layout: {{ cytoscape_config.layout | tojson }}
+              });
+            </script>
+            {% endif %}
+
+            {% if network_report and network_report.recommendations %}
+            <h4>Recommendations</h4>
+            <ul>
+              {% for rec in network_report.recommendations %}
+                <li>{{ rec }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          {% else %}
+            <p class="muted">No network data available.</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <!-- KEGG Pathways (full-width) -->
+      <section class="card section span-all" aria-labelledby="keggTitle">
+        <h3 id="keggTitle">KEGG Pathways</h3>
+        {% if kegg_images %}
+          <div class="kegg-grid">
+            {% for img in kegg_images %}
+              <figure class="kegg-card">
+                <img src="{{ img }}" alt="KEGG pathway {{ loop.index }}" loading="lazy" />
+                <figcaption class="muted">Pathway {{ loop.index }}</figcaption>
+              </figure>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">No pathways found.</p>
+        {% endif %}
+      </section>
+
+      <!-- AI Explanation (full-width) -->
+      <section class="card section span-all" aria-labelledby="aiTitle">
+        <h3 id="aiTitle">AI Explanation</h3>
+        <div class="prose">{{ r.explanation }}</div>
+      </section>
+
+      <!-- Drug Targets (moved below, left/center) -->
+      <section class="card section span-all" aria-labelledby="drugTitle">
+        <h3 id="drugTitle">Drug Targets</h3>
+        {% if r and r.drugs %}
+          <pre style="white-space:pre-wrap">{{ r.drugs }}</pre>
+        {% else %}
+          <p class="muted">No drug target suggestions available.</p>
+        {% endif %}
+      </section>
+
+      <!-- External Resources (moved below, left/center) -->
+      <section class="card section span-all" aria-labelledby="extTitle">
+        <h3 id="extTitle">External Resources</h3>
+        {% if r and r.genes %}
+          <div class="links">
+            {% for gene in r.genes[:5] %}
+              <span class="chip">{{ gene }}
+                <a href="https://www.genecards.org/cgi-bin/carddisp.pl?gene={{ gene }}" target="_blank" rel="noopener">GeneCards</a>
+                <span aria-hidden>·</span>
+                <a href="https://blast.ncbi.nlm.nih.gov/Blast.cgi?QUERY={{ gene }}" target="_blank" rel="noopener">BLAST</a>
+                <span aria-hidden>·</span>
+                <a href="https://www.uniprot.org/uniprot/?query={{ gene }}" target="_blank" rel="noopener">UniProt</a>
+              </span>
+            {% endfor %}
+          </div>
+          <p style="margin-top:10px">
+            <a class="link-btn" href="https://www.ncbi.nlm.nih.gov/geo/?term={{ r.disease | urlencode }}" target="_blank" rel="noopener">Search GEO for “{{ r.disease }}”</a>
+            <a class="link-btn" href="https://www.ncbi.nlm.nih.gov/geo/geo2r/" target="_blank" rel="noopener">GEO2R</a>
+            {% if r.genes and r.genes[0] %}
+            <a class="link-btn" href="https://www.ensembl.org/Homo_sapiens/Gene/Summary?g={{ r.genes[0] }}" target="_blank" rel="noopener">Ensembl</a>
+            {% endif %}
+          </p>
+        {% else %}
+          <p class="muted">No genes available for external resource links.</p>
+        {% endif %}
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      const saved = localStorage.getItem('ps-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      btn?.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const cur = root.getAttribute('data-theme') || 'system';
+        const nxt = cur === 'light' ? 'dark' : cur === 'dark' ? 'system' : 'light';
+        root.setAttribute('data-theme', nxt);
+        localStorage.setItem('ps-theme', nxt);
+      });
+    })();
+  </script>
+</body>
+</html>

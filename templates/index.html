@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PathoScope V5</title>
+  <!-- External app stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <!-- Minimal modern styles to elevate UI without depending on external frameworks -->
+  <style>
+    :root{
+      --bg: #0b1020; --surface:#11162a; --muted:#96a0c8; --text:#e9edff; --acc:#7aa2ff; --acc-2:#8effc7; --danger:#ff6b6b;
+      --ring: 0 0 0 2px rgba(122,162,255,.35);
+    }
+    [data-theme="light"]:root{ --bg:#f6f7fb; --surface:#ffffff; --muted:#5b6381; --text:#0d1321; --acc:#3b82f6; --acc-2:#10b981; --danger:#ef4444; }
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 700px at 10% -10%, rgba(122,162,255,.12), transparent),
+                           radial-gradient(800px 600px at 120% 10%, rgba(16,185,129,.08), transparent),
+                           var(--bg);
+         color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
+
+    /* Layout */
+    .container{max-width:1100px;margin:0 auto;padding:20px;}
+    header{
+      position:sticky;top:0;z-index:20;
+      backdrop-filter:saturate(1.4) blur(10px);
+      background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .nav{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 20px; gap:12px;
+    }
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px}
+    .brand svg{width:30px;height:30px}
+
+    main{padding:20px}
+    .grid{display:grid;gap:18px}
+    @media (min-width: 900px){ .grid{grid-template-columns: 1.1fr .9fr;} }
+
+    /* Cards */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px; padding:18px; box-shadow:0 10px 24px rgba(0,0,0,.15);
+    }
+    .card h2{margin:0 0 10px;font-size:1.1rem;color:var(--text)}
+    .muted{color:var(--muted)}
+    .section-title{font:800 1.4rem/1.2 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; margin:26px 0 12px}
+    .subtle{opacity:.9}
+
+    /* Buttons, inputs, forms */
+    .form-row{display:grid;gap:14px;margin-top:8px}
+    @media (min-width:700px){ .form-row{grid-template-columns:1fr 1fr} }
+    label{display:flex;flex-direction:column;gap:8px;font-weight:600}
+    input[type="text"], .dropzone, .file-input{border-radius:12px;border:1px solid rgba(255,255,255,.14);
+      padding:12px 14px;background:rgba(0,0,0,.25);color:var(--text);outline:none}
+    input[type="text"]:focus{box-shadow:var(--ring);}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button,.btn{cursor:pointer;border:none;border-radius:12px;padding:11px 14px;font-weight:700}
+    .btn-primary{background:linear-gradient(180deg, var(--acc), #587fe6); color:#fff}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.18)}
+    .btn-danger{background:linear-gradient(180deg, var(--danger), #d64242); color:#fff}
+    .btn:focus{box-shadow:var(--ring)}
+    .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 12px;font-weight:600}
+
+    /* Dropzone */
+    .dropzone{position:relative;display:flex;align-items:center;justify-content:center;min-height:56px;border-style:dashed}
+    .dropzone.dragover{border-color:var(--acc); box-shadow:var(--ring)}
+    .dropzone small{display:block;font-weight:500}
+    .file-input{display:none}
+
+    /* History */
+    .history-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px;}
+    .history-card{position:relative; padding:14px; border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.1)}
+    .history-title{font-weight:700; margin:2px 0 6px}
+    .history-meta{font-size:.85rem; color:var(--muted)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.18);font-size:.75rem}
+    .history-actions{display:flex;gap:8px;margin-top:10px}
+    .icon-btn{display:inline-flex;align-items:center;gap:6px}
+
+    /* Empty state */
+    .empty{padding:20px;border-radius:14px;border:1px dashed rgba(255,255,255,.2);text-align:center}
+
+    footer{opacity:.8; font-size:.9rem; padding:10px 20px 30px}
+    a{color:var(--acc)}
+
+    /* Timed Progress Overlay (Option B) */
+    #progressOverlay{
+      position:fixed; inset:0; display:none; z-index:1000;
+      background:rgba(11,16,32,.9); align-items:center; justify-content:center; padding:24px;
+    }
+    .progress-card{
+      width:min(560px, 92vw);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px; padding:18px 18px 22px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25); color: var(--text);
+    }
+    .progress-title{ font:700 1rem/1.2 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; margin-bottom:12px; }
+    .progress-track{
+      position:relative; height:12px; border-radius:999px; overflow:hidden;
+      background: rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18);
+    }
+    .progress-fill{
+      height:100%; width:0%; border-radius:999px;
+      background: linear-gradient(90deg, var(--acc), #587fe6);
+      transition: width .25s ease;
+    }
+    .progress-note{ margin-top:10px; color:var(--muted); font-size:.95rem; }
+
+    /* ------------------ New sections ------------------ */
+
+    /* Hero */
+    .hero{
+      margin:18px 0 8px;
+      padding:24px;
+      border-radius:18px;
+      background:
+        radial-gradient(600px 220px at 20% -10%, rgba(122,162,255,.18), transparent),
+        radial-gradient(400px 200px at 110% 10%, rgba(16,185,129,.12), transparent),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 10px 24px rgba(0,0,0,.15);
+    }
+    .hero h1{margin:0 0 8px;font:800 2rem/1.15 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .hero p{margin:0 0 14px; color:var(--muted)}
+    .hero-actions{display:flex; gap:10px; flex-wrap:wrap}
+    .hero-kpis{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+
+    /* Interactive Visuals */
+    .viz-grid{display:grid; gap:16px; grid-template-columns: 1fr; margin-top:10px}
+    @media (min-width:900px){ .viz-grid{ grid-template-columns: 1fr 1fr; } }
+    .viz-panel{
+      min-height:260px; display:flex; align-items:center; justify-content:center; text-align:center;
+      border-radius:14px; border:1px dashed rgba(255,255,255,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      padding:10px;
+    }
+    .viz-tabs{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap}
+    .viz-tabs button{border:1px solid rgba(255,255,255,.18); background:transparent; color:var(--text); padding:8px 12px; border-radius:999px; font-weight:700; cursor:pointer}
+    .viz-tabs button.active{background:linear-gradient(180deg, var(--acc), #587fe6); border-color:transparent}
+
+    /* AI Insights */
+    .cards-row{display:grid; gap:14px; grid-template-columns: 1fr; margin-top:10px}
+    @media (min-width:900px){ .cards-row{grid-template-columns: 1fr 1fr; } }
+    .kpi{display:flex; align-items:center; gap:12px}
+    .kpi .dot{width:10px;height:10px;border-radius:50%;background:var(--acc)}
+    .list-compact{margin:0; padding-left:18px}
+    .list-compact li{margin:4px 0}
+
+    /* Case studies */
+    .case-grid{display:grid; gap:14px; grid-template-columns: 1fr; margin-top:10px}
+    @media (min-width:900px){ .case-grid{ grid-template-columns: 1fr 1fr 1fr; } }
+    .case-card{padding:14px; border-radius:14px; border:1px solid rgba(255,255,255,.1);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))}
+    .case-card h3{margin:2px 0 6px; font-size:1rem}
+
+    /* Resource links */
+    .resource-list{display:grid; gap:10px}
+    .resource-item{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.1); background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02))}
+    .resource-item small{color:var(--muted)}
+    .inline-form{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .inline-form input[type="text"]{min-width:220px}
+
+    /* Glossary */
+    .glossary{display:flex; gap:8px; flex-wrap:wrap}
+    dfn{font-style:normal; border-bottom:1px dotted rgba(255,255,255,.35); cursor:help}
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav container">
+      <div class="brand" aria-label="PathoScope V5">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 12c0-4.418 3.582-8 8-8 2.7 0 5.08 1.34 6.53 3.39l-2.29 1.33C15.3 6.5 13.77 5.8 12 5.8 8.76 5.8 6.12 8.44 6.12 11.68S8.76 17.56 12 17.56c1.77 0 3.3-.7 4.24-1.92l2.29 1.33C17.08 19.66 14.7 21 12 21 7.58 21 4 16.97 4 12z" fill="currentColor" opacity=".9"/>
+          <circle cx="12" cy="12" r="2.6" fill="currentColor"/>
+        </svg>
+        <span>PathoScope V5</span>
+      </div>
+      <div class="actions">
+        <a href="#quick-start" class="btn btn-ghost">Analyze Your Data</a>
+        <button class="btn btn-ghost" id="themeToggle" aria-label="Toggle theme">Toggle theme</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="heroTitle">
+      <h1 id="heroTitle">AI-Driven Biomedical Discovery</h1>
+      <p class="subtle">Explore diseases, analyze gene expression, and predict drug targets with transparent, explainable bioinformatics.</p>
+      <div class="hero-actions">
+        <a href="#quick-start" class="btn btn-primary">Analyze Your Data</a>
+        <a href="#learn-more" class="btn btn-ghost">Learn more</a>
+      </div>
+      <div class="hero-kpis">
+        <div class="pill"><span>Pathways</span></div>
+        <div class="pill"><span>Drug Targets</span></div>
+        <div class="pill"><span>AI Insights</span></div>
+        <div class="pill"><span>PDF Reports</span></div>
+      </div>
+    </section>
+
+    <!-- QUICK UPLOAD & ANALYSIS -->
+    <h2 class="section-title" id="quick-start">Quick Upload & Analysis</h2>
+    <p class="muted" style="margin-top:-6px">Start with a disease keyword, a CSV of gene symbols, or both.</p>
+
+    <div class="grid" aria-labelledby="analysisFormTitle">
+      <!-- Analysis form card -->
+      <section class="card" aria-labelledby="analysisFormTitle">
+        <h2 id="analysisFormTitle">Run an analysis</h2>
+        <form method="POST" enctype="multipart/form-data" id="analyzeForm"
+              onsubmit="startProgress(this)" data-estimate-seconds="25">
+          <div class="form-row">
+            <label>
+              <span>Disease Name (optional)</span>
+              <input type="text" name="disease_name" placeholder="e.g. Alzheimer's" />
+            </label>
+
+            <label>
+              <span>Upload Gene CSV (optional)</span>
+              <div class="dropzone" id="dropzone">
+                <small>Drag & drop CSV here or <a href="#" id="browseLink">browse</a></small>
+                <input class="file-input" id="csvInput" type="file" name="csv_file" accept=".csv" />
+              </div>
+              <div class="muted" id="fileName" aria-live="polite" style="margin-top:6px"></div>
+            </label>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Analyze</button>
+            <button type="reset" class="btn btn-ghost" id="clearForm">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Search history card -->
+      <section class="card" aria-labelledby="historyTitle">
+        <h2 id="historyTitle">Search History</h2>
+
+        {% if history %}
+          <div class="history-grid">
+            {% for h in history %}
+              <article class="history-card">
+                <div class="badge">#{{ loop.index }}</div>
+                <div class="history-title">{{ h.disease or 'Untitled search' }}</div>
+                <div class="history-meta">
+                  {% if h.timestamp %}<span>Ran {{ h.timestamp }}</span>{% endif %}
+                  {% if h.genes %} · <span>{{ h.genes|length }} genes</span>{% endif %}
+                </div>
+
+                <div class="history-actions">
+                  <form method="POST" style="display:inline" title="Re-run this search"
+                        onsubmit="startProgress(this)" data-estimate-seconds="20">
+                    <input type="hidden" name="disease_name" value="{{ h.disease }}" />
+                    <button class="btn icon-btn btn-primary" type="submit">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.708" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 4v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                      <span>Re-run</span>
+                    </button>
+                  </form>
+
+                  <a class="btn icon-btn btn-ghost" href="{{ url_for('delete', i=loop.index0) }}" title="Delete this item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M7 7v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span>Delete</span>
+                  </a>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">
+            <p class="muted">No history yet. Your recent analyses will show up here as cards with quick actions.</p>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+
+    <!-- INTERACTIVE VISUALS -->
+    <h2 class="section-title" id="learn-more">Interactive Visuals</h2>
+    <section class="card" aria-labelledby="vizTitle">
+      <div class="viz-tabs" role="tablist" aria-label="Visualization tabs">
+        <button class="active" data-viz="pathway">Pathway Map</button>
+        <button data-viz="protein">3D Protein</button>
+        <button data-viz="heatmap">Heatmap / PCA</button>
+      </div>
+      <div class="viz-grid">
+        <div id="vizPrimary" class="viz-panel" aria-live="polite">
+          <div>
+            <strong>Pathway Map Viewer</strong>
+            <p class="muted">Highlight and click a gene to see its role in the pathway.</p>
+          </div>
+        </div>
+        <div id="vizSecondary" class="viz-panel">
+          <div>
+            <strong>Context Panel</strong>
+            <p class="muted">Details, legends, and selections appear here.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI MODEL INSIGHTS -->
+    <h2 class="section-title">AI Model Insights</h2>
+    <div class="cards-row">
+      <section class="card" aria-labelledby="modelCardTitle">
+        <h2 id="modelCardTitle">Model Card</h2>
+        <ul class="list-compact">
+          <li><strong>Data</strong>: Transcriptomics + curated drug–target databases</li>
+          <li><strong>Models</strong>: Random Forest / GNN (configurable)</li>
+          <li><strong>Validation</strong>: 5-fold CV; AUROC/PR reported</li>
+          <li><strong>Limitations</strong>: Dataset bias; not clinical advice</li>
+        </ul>
+        <div style="height:8px"></div>
+        <div class="kpi"><span class="dot"></span><span>Example AUROC: 0.89 (demo)</span></div>
+        <div class="kpi"><span class="dot"></span><span>Calibration: good within 0.6–0.9 p̂</span></div>
+      </section>
+
+      <section class="card" aria-labelledby="xaiTitle">
+        <h2 id="xaiTitle">Explainable AI</h2>
+        <p class="muted">Top features contributing to predictions (placeholder):</p>
+        <ol class="list-compact" id="xaiFeatures">
+          <li>GENE1 (importance 0.21)</li>
+          <li>GENE2 (0.19)</li>
+          <li>GENE3 (0.14)</li>
+          <li>GENE4 (0.09)</li>
+          <li>GENE5 (0.07)</li>
+        </ol>
+        <div class="viz-panel" style="min-height:160px; margin-top:10px;">
+          <div>
+            <strong>Feature Importance Chart</strong>
+            <p class="muted">Bar plot placeholder – connect to your actual scores.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- CASE STUDIES -->
+    <h2 class="section-title">Real-World Case Studies</h2>
+    <section class="case-grid" aria-label="Case studies">
+      <article class="case-card">
+        <h3>Alzheimer’s Disease</h3>
+        <p class="muted">Misregulated synaptic/immune pathways highlighted; candidate drugs surfaced from similarity search.</p>
+      </article>
+      <article class="case-card">
+        <h3>Breast Cancer</h3>
+        <p class="muted">Differential genes enrich PI3K/AKT; short-list biomarkers and potential inhibitors.</p>
+      </article>
+      <article class="case-card">
+        <h3>Rare Disorder</h3>
+        <p class="muted">Small-n transcriptomes aggregated; pathway priors guide target nomination.</p>
+      </article>
+    </section>
+
+    <!-- RESOURCES & COMMUNITY -->
+    <h2 class="section-title">Resources & Community</h2>
+    <section class="card">
+      <div class="resource-list">
+        <!-- Literature Lookup now posts directly to PubMed -->
+        <div class="resource-item">
+          <div>
+            <strong>Literature Lookup (PubMed)</strong><br>
+            <small>Search the latest papers related to your disease.</small>
+          </div>
+          <form class="inline-form" method="GET" action="https://pubmed.ncbi.nlm.nih.gov/" target="_blank" rel="noopener">
+            <!-- PubMed expects the 'term' query parameter -->
+            <input type="text" name="term" placeholder="e.g. Alzheimer’s microglia transcriptome" />
+            <button class="btn btn-primary" type="submit">Search</button>
+          </form>
+        </div>
+
+        <div class="resource-item">
+          <div>
+            <strong>DrugBank / PubChem</strong><br>
+            <small>Jump to compound pages for deeper reference.</small>
+          </div>
+          <div class="actions">
+            <a class="btn btn-ghost" href="https://go.drugbank.com" target="_blank" rel="noopener">DrugBank</a>
+            <a class="btn btn-ghost" href="https://pubchem.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PubChem</a>
+          </div>
+        </div>
+
+        <div class="resource-item">
+          <div>
+            <strong>Glossary</strong><br>
+            <small>Hover for quick definitions.</small>
+          </div>
+          <div class="glossary">
+            <dfn title="All RNA molecules expressed in a cell or tissue at a given time.">transcriptome</dfn>
+            <dfn title="Computational discipline applying algorithms/statistics to biological data.">bioinformatics</dfn>
+            <dfn title="Network of biochemical reactions within a cell.">pathway</dfn>
+            <dfn title="Ranking of variable contributions to a model’s prediction.">feature importance</dfn>
+          </div>
+        </div>
+
+        <!-- Contact replaced with plain email address -->
+        <div class="resource-item">
+          <div>
+            <strong>Collaborations</strong><br>
+            <small>Reach me at:</small>
+          </div>
+          <!-- Shows just the address, but still clickable -->
+          <div style="font-weight:700;">
+            <a href="mailto:maarten.ringburg@gmail.com">maarten.ringburg@gmail.com</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFESSIONAL EDGE -->
+    <h2 class="section-title">Professional Edge</h2>
+    <div class="cards-row">
+      <section class="card" aria-labelledby="reportsTitle">
+        <h2 id="reportsTitle">Downloadable Reports</h2>
+        <p class="muted">Export full analyses as PDF/CSV to share or archive.</p>
+        <div class="actions">
+          <!-- Direct working download of a static PDF -->
+          <a class="btn btn-primary" href="{{ url_for('static', filename='sample_report.pdf') }}" download>
+            Download Sample Report (PDF)
+          </a>
+          <!-- Optional: view inline -->
+          <a class="btn btn-ghost" href="{{ url_for('static', filename='sample_report.pdf') }}" target="_blank" rel="noopener">
+            View Sample Report
+          </a>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="ethicsTitle">
+        <h2 id="ethicsTitle">Ethics & Privacy</h2>
+        <p class="muted">We prioritize responsible AI and privacy. Data never leaves your session unless you export it. Models are for research; not clinical advice.</p>
+        <ul class="list-compact">
+          <li>De-identification encouraged</li>
+          <li>Local processing where possible</li>
+          <li>Transparent model reporting</li>
+        </ul>
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="container muted">
+    <div>Tip: You can run an analysis with either a disease keyword, a CSV of gene symbols, or both.</div>
+  </footer>
+
+  <!-- Timed progress overlay -->
+  <div id="progressOverlay" style="display:none;">
+    <div class="progress-card" role="alert" aria-live="assertive" aria-busy="true">
+      <div class="progress-title">Analyzing…</div>
+      <div class="progress-track" aria-label="progress">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-note">This may take a moment.</div>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle with localStorage
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      const root = document.documentElement;
+      const saved = localStorage.getItem('ps-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      btn?.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const cur = root.getAttribute('data-theme') || 'system';
+        const nxt = cur === 'light' ? 'dark' : cur === 'dark' ? 'system' : 'light';
+        root.setAttribute('data-theme', nxt);
+        localStorage.setItem('ps-theme', nxt);
+      });
+    })();
+
+    // Dropzone UX
+    (function(){
+      const dz = document.getElementById('dropzone');
+      const fileInput = document.getElementById('csvInput');
+      const browse = document.getElementById('browseLink');
+      const fileName = document.getElementById('fileName');
+      if(!dz || !fileInput) return;
+
+      const setName = () => fileName.textContent = fileInput.files?.[0]?.name ? `Selected: ${fileInput.files[0].name}` : '';
+
+      browse?.addEventListener('click', (e)=>{ e.preventDefault(); fileInput.click(); });
+      fileInput.addEventListener('change', setName);
+
+      ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover'); }));
+      ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); }));
+      dz.addEventListener('drop', e => {
+        const files = e.dataTransfer?.files;
+        if(files && files.length) { fileInput.files = files; setName(); }
+      });
+
+      document.getElementById('clearForm')?.addEventListener('click', ()=>{ fileInput.value=''; setName(); });
+    })();
+
+    /* -------- Timed Progress Bar (Option B) -------- */
+    let psTimer = null, psStart = 0, psEst = 20000; // default 20s
+
+    function startProgress(formEl){
+      const estimateSec = parseFloat(formEl?.dataset?.estimateSeconds || '') || 20;
+      psEst = Math.max(estimateSec, 2) * 1000;
+
+      const overlay = document.getElementById('progressOverlay');
+      const fill = document.getElementById('progressFill');
+
+      overlay.style.display = 'flex';
+      fill.style.width = '0%';
+
+      const submitBtn = formEl.querySelector('button[type="submit"]');
+      if(submitBtn){ submitBtn.disabled = true; submitBtn.setAttribute('aria-disabled','true'); }
+
+      psStart = performance.now();
+      cancelAnimationFrame(psTimer);
+
+      const tick = (now) => {
+        const t = Math.min((now - psStart) / psEst, 1);
+        const eased = 1 - Math.pow(1 - t, 2);
+        const pct = Math.min(95, Math.round(eased * 100));
+        fill.style.width = pct + '%';
+        psTimer = requestAnimationFrame(tick);
+      };
+      psTimer = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('pagehide', () => {
+      const fill = document.getElementById('progressFill');
+      if (fill){ fill.style.width = '100%'; }
+      cancelAnimationFrame(psTimer);
+    });
+
+    window.addEventListener('pageshow', () => {
+      const overlay = document.getElementById('progressOverlay');
+      if (overlay){ overlay.style.display = 'none'; }
+      cancelAnimationFrame(psTimer);
+    });
+
+    // ---------- Interactive Visuals tab switcher (simple placeholders) ----------
+    (function(){
+      const tabs = document.querySelectorAll('.viz-tabs button');
+      const primary = document.getElementById('vizPrimary');
+      const secondary = document.getElementById('vizSecondary');
+      const makePanel = (title, note) => `
+        <div>
+          <strong>${title}</strong>
+          <p class="muted">${note}</p>
+        </div>
+      `;
+      tabs.forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          tabs.forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          const v = btn.getAttribute('data-viz');
+          if(v==='pathway'){
+            primary.innerHTML = makePanel('Pathway Map Viewer', 'Highlight and click a gene to see its role in the pathway.');
+            secondary.innerHTML = makePanel('Context Panel', 'Pathway legend, filters, and selection details.');
+          }else if(v==='protein'){
+            primary.innerHTML = makePanel('3D Protein Viewer', 'Rotate/zoom the structure of a selected target (embed JSmol/3Dmol.js).');
+            secondary.innerHTML = makePanel('Binding Site Panel', 'Residues, pockets, and docking snapshots.');
+          }else{
+            primary.innerHTML = makePanel('Heatmap / PCA', 'Visualize differential expression and clustering.');
+            secondary.innerHTML = makePanel('Sample/Group Info', 'Cohort metadata and selections.');
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

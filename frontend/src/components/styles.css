@@ -1,0 +1,41 @@
+.login-container {
+    max-width: 300px;
+    margin: 5rem auto;
+    padding: 2rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+  .login-container .error {
+    color: red;
+  }
+  .analysis-panel input,
+  .history-panel ul {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+.ai-explanation-box {
+  background: #f9f9fc;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 1.2rem 1.5rem;
+  margin: 1rem 0;
+  font-size: 1.08rem;
+  line-height: 1.7;
+  color: #22223b;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.ai-explanation-box h1,
+.ai-explanation-box h2,
+.ai-explanation-box h3 {
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  color: #3a3a5a;
+}
+.ai-explanation-box ul,
+.ai-explanation-box ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+.ai-explanation-box p {
+  margin-bottom: 0.8em;
+}

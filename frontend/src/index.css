@@ -1,0 +1,11 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+  }
+  .dashboard main {
+    display: flex;
+  }
+  .analysis-panel, .history-panel {
+    flex: 1;
+    padding: 1rem;
+  }

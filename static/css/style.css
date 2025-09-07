@@ -1,0 +1,27 @@
+body { margin:0; font-family: sans-serif; }
+header { display:flex; align-items:center; padding: 1rem; background:#0077cc; color:white; }
+.logo { height:40px; margin-right:1rem; }
+main { padding:1rem; }
+button { margin-left:auto; }
+[data-theme="dark"] { background:black; color:white; }
+
+/* Add error message styling */
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+}
+
+.error-message p {
+  margin: 0;
+}
+
+#themeToggle {
+  position: absolute;
+  top: 10px;   /* adjust spacing from top */
+  right: 20px; /* adjust spacing from right */
+  z-index: 100; /* keep it above other elements */
+}
