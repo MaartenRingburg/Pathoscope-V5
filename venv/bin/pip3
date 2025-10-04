@@ -1,4 +1,4 @@
-#!/Users/maartenringburg/Downloads/Pathoscope-V5/venv/bin/python3
+#!/Users/maartenringburg/Desktop/Pathoscope-V5/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
